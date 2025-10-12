@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* --- MonthLetters cozy vibe --- */
+body {
+  background: #FBF3E4;
+  color: #2B2B2B;
+  font-family: system-ui, sans-serif;
+  min-height: 100vh;
+  margin: 0;
+}
+
+input,
+textarea {
+  background: #fffaf3;
+  border: 1px solid #e0cda3;
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+}
+
+button {
+  background: #D97706;
+  color: white;
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  transition: opacity 0.2s ease-in-out;
+}
+
+button:hover {
+  opacity: 0.9;
+}
