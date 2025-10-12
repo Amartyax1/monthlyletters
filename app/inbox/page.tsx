@@ -1,7 +1,7 @@
 import { supabaseServer } from '@/lib/supabaseServer'
 
 export default async function InboxPage(){
-  const supabase = supabaseServer()
+  const supabase = await supabaseServer()
   const { data: { user } } = await supabase.auth.getUser()
   
   if(!user) return <div>Please sign in to view your inbox.</div>
