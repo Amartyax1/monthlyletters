@@ -1,48 +1,47 @@
-'use client'
-
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabaseBrowser } from '@/lib/supabaseBrowser'
+import NotificationBell from './NotificationBell'
+import { NotificationActions } from './NotificationActions'
+import SignOutButton from './SignOutButton'
 
-export default function Nav() {
-  const supabase = supabaseBrowser()
-  const [email, setEmail] = useState<string | null>(null)
+interface NavProps {
+  userEmail: string | null
+  displayName: string | null
+}
 
-  // Check current user session on load
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null))
-  }, [])
-
+export default function Nav({ userEmail, displayName }: NavProps) {
   return (
-    <nav className="flex items-center justify-between py-3">
-      <Link href="/" className="text-xl">MonthLetters</Link>
+    <nav className="flex items-center gap-6">
+      {/* Navigation Links */}
       <div className="flex gap-3">
-        <Link href="/inbox">Inbox</Link>
-        <Link href="/compose">Compose</Link>
-        <Link href="/sent">Sent</Link>
-
-        {/* Conditional rendering based on whether user is logged in */}
-        {email ? (
-          <button
-            onClick={() => supabase.auth.signOut()}
-            className="text-sm underline"
-          >
-            Sign out
-          </button>
+        <Link href="/inbox" className="hover:text-[#8B6F47]">Inbox</Link>
+        <Link href="/compose" className="hover:text-[#8B6F47]">Compose</Link>
+        <Link href="/sent" className="hover:text-[#8B6F47]">Sent</Link>
+        <Link href="/settings" className="hover:text-[#8B6F47]">Settings</Link>
+      </div>
+      
+      {/* Notification section - only show when logged in */}
+      {userEmail && (
+        <div className="flex items-center gap-3">
+          <NotificationBell />
+          <NotificationActions />
+        </div>
+      )}
+      
+      {/* User info and auth */}
+      <div className="flex items-center gap-3 ml-auto">
+        {userEmail ? (
+          <>
+            {displayName && (
+              <span className="text-sm font-medium">{displayName}</span>
+            )}
+            <SignOutButton />
+          </>
         ) : (
           <div className="flex gap-2">
-            <button
-              onClick={() => supabase.auth.signInWithOtp({ email: prompt('Email for magic link?') || '' })}
-              className="text-sm underline"
-            >
-              Email Login
-            </button>
-            <button
-              onClick={() => supabase.auth.signInWithOAuth({ provider: 'google' })}
-              className="text-sm underline"
-            >
-              Google
-            </button>
+            <Link href="/auth/login" className="text-sm underline hover:text-[#8B6F47]">
+              Sign In
+            </Link>
           </div>
         )}
       </div>

@@ -6,3 +6,25 @@
 body { background: #FBF3E4; color: #2B2B2B; }
 input, textarea { background: #fffaf3; }
 button { background: #D97706; color: #fff; border-radius: 0.25rem; padding: 0.5rem 1rem; }
+.card {
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.08);
+  background: #fff7edcc;
+  backdrop-filter: blur(4px);
+  padding: 12px;
+}
+
+.btn {
+  background: #D97706;
+  color: white;
+  padding: 8px 14px;
+  border-radius: 8px;
+}
+
+.input {
+  background: #fffaf3;
+  border: 1px solid rgba(0,0,0,0.1);
+  padding: 8px;
+  border-radius: 8px;
+}
+

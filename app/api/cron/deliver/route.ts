@@ -10,29 +10,49 @@ function ensureSecret(req: Request) {
 
 // --- Main GET route handler ---
 export async function GET(req: Request) {
+  const startTime = Date.now()
+  console.log('[CRON] Delivery job started at', new Date().toISOString())
+
+  // Verify authorization
   if (!ensureSecret(req)) {
+    console.error('[CRON] Unauthorized access attempt')
     return new NextResponse('Unauthorized', { status: 401 })
   }
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY! // server-only key
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
   const today = new Date().toISOString().slice(0, 10)
+  console.log('[CRON] Checking for letters to deliver on or before:', today)
 
+  // Fetch pending letters ready for delivery
   const { data: letters, error } = await supabase
     .from('letters')
     .select('id, recipient_email')
     .eq('status', 'pending')
     .lte('deliver_on', today)
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  if (!letters?.length) return NextResponse.json({ delivered: 0 })
+  if (error) {
+    console.error('[CRON] Error fetching letters:', error.message)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  console.log(`[CRON] Found ${letters?.length || 0} pending letters`)
+
+  if (!letters?.length) {
+    console.log('[CRON] No letters to deliver')
+    return NextResponse.json({ delivered: 0 })
+  }
 
   // Map emails to user IDs
   const { data: { users }, error: listErr } = await supabase.auth.admin.listUsers()
-  if (listErr) return NextResponse.json({ error: listErr.message }, { status: 500 })
+  
+  if (listErr) {
+    console.error('[CRON] Error listing users:', listErr.message)
+    return NextResponse.json({ error: listErr.message }, { status: 500 })
+  }
 
   const emailToId = new Map<string, string>()
   users.forEach(u => {
@@ -42,6 +62,8 @@ export async function GET(req: Request) {
   const deliverables = letters.filter(l =>
     emailToId.has(l.recipient_email.toLowerCase())
   )
+
+  console.log(`[CRON] ${deliverables.length} letters have valid recipients`)
 
   const deliveriesRows = deliverables.map(l => ({
     letter_id: l.id,
@@ -53,17 +75,23 @@ export async function GET(req: Request) {
     const { error: insDelErr } = await supabase
       .from('deliveries')
       .insert(deliveriesRows)
-    if (insDelErr)
+    
+    if (insDelErr) {
+      console.error('[CRON] Error inserting deliveries:', insDelErr.message)
       return NextResponse.json({ error: insDelErr.message }, { status: 500 })
+    }
 
-    // Update letters’ status
+    // Update letters' status
     const ids = deliverables.map(d => d.id)
     const { error: updErr } = await supabase
       .from('letters')
       .update({ status: 'delivered' })
       .in('id', ids)
-    if (updErr)
+    
+    if (updErr) {
+      console.error('[CRON] Error updating letter status:', updErr.message)
       return NextResponse.json({ error: updErr.message }, { status: 500 })
+    }
 
     // Create notifications
     const notifs = deliveriesRows.map(d => ({
@@ -71,13 +99,24 @@ export async function GET(req: Request) {
       type: 'letter_received',
       payload: { letter_id: d.letter_id },
     }))
-
+    
     const { error: notifErr } = await supabase
       .from('notifications')
       .insert(notifs)
-    if (notifErr)
+    
+    if (notifErr) {
+      console.error('[CRON] Error creating notifications:', notifErr.message)
       return NextResponse.json({ error: notifErr.message }, { status: 500 })
+    }
+
+    console.log(`[CRON] Successfully delivered ${deliveriesRows.length} letters`)
   }
 
-  return NextResponse.json({ delivered: deliveriesRows.length })
+  const duration = Date.now() - startTime
+  console.log(`[CRON] Job completed in ${duration}ms`)
+
+  return NextResponse.json({ 
+    delivered: deliveriesRows.length,
+    duration_ms: duration 
+  })
 }
